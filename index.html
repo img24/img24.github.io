@@ -548,6 +548,7 @@ function saveSettings(){
   state.settings.autoSync=document.getElementById('auto-sync').checked;
   save();updateSyncBadge();applyProfile();closeModal('settings-modal');
   loadPlan();toast('Сохранено');
+  if(state.settings.syncUrl)syncPull();
 }
 // ===== MOBILITY =====
 function startMobilityTest(){testStep=0;testScores=Object.assign({},state.mobilityScores);MOBILITY_TESTS.forEach(function(t){if(!testScores[t.id])testScores[t.id]=3;});document.getElementById('test-modal').classList.remove('hidden');renderTestStep();}
@@ -707,7 +708,7 @@ function savePlan(){savePlanFromDOM();save();toast('✓ Сохранено');ren
 function renderPlannerHistory(){var wrap=document.getElementById('planner-history');var sorted=Object.keys(state.plans).filter(function(d){return d!==plannerDate&&state.plans[d].blocks&&state.plans[d].blocks.length;}).sort(function(a,b){return b>a?1:-1;}).slice(0,5);if(!sorted.length){wrap.innerHTML='<div class="empty" style="padding:20px"><p>Нет планов</p></div>';return;}var h='';sorted.forEach(function(d){var p=state.plans[d];h+='<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="loadHistoryPlan(\''+d+'\')"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:500">'+fmtDate(d)+'</span><div style="display:flex;gap:4px;flex-wrap:wrap">';(p.blocks||[]).forEach(function(b){h+='<span class="badge badge-'+badgeCls(b.type)+'">'+b.type+'</span>';});h+='</div></div>';(p.blocks||[]).slice(0,2).forEach(function(b){var lab=blockLabel(b);if(lab)h+='<div style="font-size:12px;color:var(--text2)">'+escHtml(lab)+'</div>';});h+='</div>';});wrap.innerHTML=h;}
 function loadHistoryPlan(d){savePlanSilent();plannerDate=d;save();updatePlannerDateLabel();loadPlan();toast('Загружено: '+fmtDate(d));window.scrollTo(0,0);}
 // ===== ОБЩИЕ ДАННЫЕ КОМАНДЫ =====
-function myUserData(){return{gender:state.profile.gender,role:state.profile.role,tests:state.tests,logEntries:state.logEntries,results:state.results,mobilityScores:state.mobilityScores,updated:Date.now()};}
+function myUserData(){return{gender:state.profile.gender,role:state.profile.role,tests:state.tests,logEntries:state.logEntries,results:state.results,mobilityScores:state.mobilityScores,mobilityHistory:state.mobilityHistory,mobilityDone:state.mobilityDone,updated:Date.now()};}
 function teamUsers(){var t=Object.assign({},state.team);if(state.profile.name)t[state.profile.name]=myUserData();return t;}
 // ===== ТЕСТЫ / ЛИДЕРБОРД =====
 function setTestsView(v){testsView=v;document.getElementById('tests-mine').classList.toggle('active',v==='mine');document.getElementById('tests-board').classList.toggle('active',v==='board');document.getElementById('tests-mine-view').style.display=v==='mine'?'':'none';document.getElementById('tests-board-view').style.display=v==='board'?'':'none';renderTests();}
@@ -784,16 +785,22 @@ function syncPush(){
   var url=state.settings.syncUrl;if(!url){toast('Добавь URL в настройках');return;}
   if(!state.profile.name){toast('Сначала укажи имя');return;}
   setSyncing(true);
-  var payload={user:state.profile.name,userData:myUserData()};
-  if(isCoach())payload.plans=state.plans; // планы шлёт только тренер
-  fetch(url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}})
+  fetch(url,{method:'GET'})
     .then(function(r){return r.json();})
-    .then(function(store){mergeStore(store);toast('↑ Отправлено');})
-    .catch(function(){toast('Ошибка отправки. Проверь URL/интернет и настройки доступа скрипта');})
+    .then(function(store){mergeStore(store);})
+    .catch(function(){})
+    .then(function(){
+      var payload={user:state.profile.name,userData:myUserData()};
+      if(isCoach())payload.plans=state.plans;
+      return fetch(url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
+    })
+    .then(function(r){return r.json();})
+    .then(function(store){mergeStore(store);toast('↑ Отправлено');init();})
+    .catch(function(){toast('Ошибка отправки. Проверь URL и настройки доступа скрипта');})
     .finally(function(){setSyncing(false);});
 }
 function syncPull(){
-  var url=state.settings.syncUrl;if(!url){if(!state.profile.name){}else toast('Добавь URL в настройках');init();return;}
+  var url=state.settings.syncUrl;if(!url){init();return;}
   setSyncing(true);
   fetch(url,{method:'GET'})
     .then(function(r){return r.json();})
@@ -801,11 +808,28 @@ function syncPull(){
     .catch(function(){toast('Ошибка загрузки. Проверь URL');})
     .finally(function(){setSyncing(false);init();});
 }
+function mergeMine(c){
+  if(!c||typeof c!=='object')return;
+  state.logEntries=state.logEntries||[];
+  var seen={};state.logEntries.forEach(function(e){seen[e.id]=true;});
+  (c.logEntries||[]).forEach(function(e){if(e&&!seen[e.id]){state.logEntries.push(e);seen[e.id]=true;}});
+  state.logEntries.sort(function(a,b){return (b.id||0)-(a.id||0);});
+  state.tests=state.tests||{};var ct=c.tests||{};
+  Object.keys(ct).forEach(function(k){var loc=state.tests[k],rem=ct[k];if(!loc){state.tests[k]=rem;}else if((rem.date||'')>(loc.date||'')){state.tests[k]=rem;}});
+  state.results=state.results||{};var cr=c.results||{};
+  Object.keys(cr).forEach(function(d){var rr=cr[d]||{};if(!state.results[d])state.results[d]={byBlock:{},notes:''};var lb=state.results[d].byBlock||{},rb=rr.byBlock||{};Object.keys(rb).forEach(function(bid){if(!lb[bid])lb[bid]=rb[bid];});state.results[d].byBlock=lb;if(!state.results[d].notes&&rr.notes)state.results[d].notes=rr.notes;});
+  state.mobilityHistory=state.mobilityHistory||[];var have={};state.mobilityHistory.forEach(function(x){have[x.date]=true;});
+  (c.mobilityHistory||[]).forEach(function(x){if(x&&!have[x.date]){state.mobilityHistory.push(x);have[x.date]=true;}});
+  state.mobilityHistory.sort(function(a,b){return a.date>b.date?1:-1;});
+  if(!Object.keys(state.mobilityScores||{}).length){state.mobilityScores=(c.mobilityScores&&Object.keys(c.mobilityScores).length)?c.mobilityScores:(state.mobilityHistory.length?(state.mobilityHistory[state.mobilityHistory.length-1].scores||{}):{});}
+  state.mobilityDone=state.mobilityDone||{};var cd=c.mobilityDone||{};
+  Object.keys(cd).forEach(function(d){if(!state.mobilityDone[d])state.mobilityDone[d]=cd[d];});
+}
 function mergeStore(store){
   if(!store||typeof store!=='object')return;
-  // команда: все пользователи из облака (кроме меня — я источник истины для себя)
-  if(store.users){var team={};Object.keys(store.users).forEach(function(nm){if(nm!==state.profile.name)team[nm]=store.users[nm];});state.team=team;}
-  // общие планы от тренера — если я не тренер, беру облачные; если тренер, мои главнее, но подхватываю чужие даты
+  if(!store.users&&store.user&&store.userData){var tmp={users:{},plans:store.plans||{}};tmp.users[store.user]=store.userData;store=tmp;}
+  var myName=state.profile.name;
+  if(store.users){var team={};Object.keys(store.users).forEach(function(nm){if(nm===myName){mergeMine(store.users[nm]);}else{team[nm]=store.users[nm];}});state.team=team;}
   if(store.plans){if(isCoach()){Object.keys(store.plans).forEach(function(d){if(!state.plans[d])state.plans[d]=store.plans[d];});}else{state.plans=store.plans;}}
   migrateBlockIds();
   save();
