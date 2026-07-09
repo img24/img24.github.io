@@ -393,10 +393,11 @@ h3{font-size:14px;font-weight:500;color:var(--text2)}
       <div class="section-divider">синхронизация</div>
       <div class="form-group"><label class="form-label">URL (Google Apps Script)</label><input type="text" id="sync-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
       <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:14px;cursor:pointer"><input type="checkbox" id="auto-sync" style="width:auto"> Авто-синхронизация при сохранении</label>
-      <div style="display:flex;gap:8px;margin-bottom:12px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
         <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="syncPush()">↑ Отправить</button>
         <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="syncPull()">↓ Загрузить</button>
       </div>
+      <button class="btn" style="width:100%;justify-content:center;margin-bottom:12px" onclick="syncDiag()">Проверить, что лежит в облаке</button>
       <div style="font-size:12px;color:var(--text3);padding:8px;background:var(--surface2);border-radius:var(--radius)">Тренер пишет план и отправляет. Атлеты загружают, вносят свои результаты, отправляют. Лента и лидерборды собираются из данных всех участников.</div>
       <div class="section-divider">резервная копия</div>
       <div style="display:flex;gap:8px">
@@ -699,7 +700,17 @@ function migrateBlockIds(){var changed=false;Object.keys(state.plans).forEach(fu
 function saveResultInline(id,val){ensureResults();var r=state.results[plannerDate];r.byBlock[id]=val;r.meta=r.meta||{};var b=blkById(id);if(b)r.meta[id]={type:b.type,text:formatBlockText(b)};save();}
 function addPlanBlock(){if(!isCoach())return;ensurePlan();var t='СИЛОВАЯ';state.plans[plannerDate].blocks.push({id:genId(),type:t,d:defaultD(t)});state.plans[plannerDate].author=state.profile.name;touchPlan();save();renderPlanBlocks();}
 function removeBlock(id){ensurePlan();state.plans[plannerDate].blocks=state.plans[plannerDate].blocks.filter(function(b){return b.id!==id;});touchPlan();save();renderPlanBlocks();}
-function planHasContent(d){var p=state.plans[d];if(!p)return false;if(p.blocks&&p.blocks.length)return true;return !!(p.warmup&&p.warmup.trim());}
+function blockIsEmpty(b){
+  if(!b)return true;
+  if(b.content&&b.content.trim())return false;
+  var d=b.d;if(!d)return true;
+  var vals=[];
+  ['exercise','sets','reps','weight','rest','rounds','method','work','intervals','pace','content'].forEach(function(k){if(d[k]!=null)vals.push(''+d[k]);});
+  if(d.items)d.items.forEach(function(it){['exercise','sets','reps','weight','restSets','restAfter','amount'].forEach(function(k){if(it[k]!=null)vals.push(''+it[k]);});});
+  return !vals.some(function(v){return v.trim()&&v!=='continuous';});
+}
+function planBlockCount(p){return((p&&p.blocks)||[]).filter(function(b){return !blockIsEmpty(b);}).length;}
+function planHasContent(d){var p=state.plans[d];if(!p)return false;if(planBlockCount(p)>0)return true;return !!(p.warmup&&p.warmup.trim());}
 function pruneEmptyPlans(){var ch=false;Object.keys(state.plans).forEach(function(d){if(!planHasContent(d)){delete state.plans[d];ch=true;}});if(ch)save();}
 function touchPlan(){if(state.plans[plannerDate])state.plans[plannerDate].updated=Date.now();}
 function savePlanFromDOM(){
@@ -799,14 +810,35 @@ function syncPush(){
     .catch(function(){})
     .then(function(){
       pruneEmptyPlans();
+      Object.keys(state.plans).forEach(function(d){if(!state.plans[d].updated)state.plans[d].updated=Date.now();});
+      save();
       var payload={user:state.profile.name,userData:myUserData()};
       if(isCoach())payload.plans=state.plans;
       return fetch(url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
     })
-    .then(function(r){return r.json();})
-    .then(function(store){mergeStore(store);toast('↑ Отправлено');init();})
-    .catch(function(){toast('Ошибка отправки. Проверь URL и настройки доступа скрипта');})
+    .then(function(r){return r.text();})
+    .then(function(txt){
+      var store;
+      try{store=JSON.parse(txt);}catch(e){throw new Error('Скрипт вернул не JSON: '+txt.slice(0,140));}
+      if(store&&store.error)throw new Error('Скрипт: '+store.error);
+      mergeStore(store);toast('↑ Отправлено');init();
+    })
+    .catch(function(e){toast((e&&e.message)?e.message:'Ошибка отправки. Проверь URL и доступ скрипта');})
     .finally(function(){setSyncing(false);});
+}
+function syncDiag(){
+  var url=state.settings.syncUrl;if(!url){alert('URL синхронизации не задан');return;}
+  fetch(url,{method:'GET'}).then(function(r){return r.text();}).then(function(txt){
+    var s;try{s=JSON.parse(txt);}catch(e){alert('Ответ скрипта не JSON:\n\n'+txt.slice(0,400));return;}
+    var users=Object.keys(s.users||{});
+    var plans=Object.keys(s.plans||{}).sort();
+    var lines=['РАЗМЕР ОТВЕТА: '+txt.length+' байт','','УЧАСТНИКИ ('+users.length+'):'];
+    users.forEach(function(u){var ud=s.users[u]||{};lines.push('  • '+u+' — тестов: '+Object.keys(ud.tests||{}).length+', записей: '+((ud.logEntries||[]).length)+', дней с результатами: '+Object.keys(ud.results||{}).length);});
+    lines.push('','ПЛАНЫ В ОБЛАКЕ ('+plans.length+'):');
+    plans.slice(-10).forEach(function(d){var p=s.plans[d]||{};lines.push('  • '+d+' — заданий: '+((p.blocks||[]).length)+(p.updated?'':'  (без метки времени)'));});
+    if(!plans.length)lines.push('  ПУСТО — планы не сохранены в облаке.');
+    alert(lines.join('\n'));
+  }).catch(function(){alert('Не удалось получить данные. Проверь URL и доступ скрипта.');});
 }
 function syncPull(){
   var url=state.settings.syncUrl;if(!url){init();return;}
@@ -838,14 +870,17 @@ function mergePlans(cloudPlans){
   if(!cloudPlans)return;
   Object.keys(cloudPlans).forEach(function(d){
     var rem=cloudPlans[d];if(!rem)return;
-    var remHas=(rem.blocks&&rem.blocks.length)||(rem.warmup&&rem.warmup.trim());
+    var remBlocks=planBlockCount(rem);
+    var remHas=remBlocks>0||(rem.warmup&&rem.warmup.trim());
     if(!remHas)return;
     var loc=state.plans[d];
     var locHas=planHasContent(d);
     if(!locHas){state.plans[d]=rem;return;}
     if(!isCoach()){state.plans[d]=rem;return;}
     var lu=(loc&&loc.updated)||0,ru=rem.updated||0;
-    if(ru>lu)state.plans[d]=rem;
+    if(ru>lu){state.plans[d]=rem;return;}
+    // старые записи без метки времени: побеждает более полный план
+    if(!lu&&!ru&&remBlocks>planBlockCount(loc))state.plans[d]=rem;
   });
 }
 function mergeStore(store){
