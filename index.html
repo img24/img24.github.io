@@ -192,7 +192,7 @@ h3{font-size:14px;font-weight:500;color:var(--text2)}
   <div id="header-logo"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
   <div id="header-title"><span>FitLog</span><span class="role-pill" id="role-pill" style="display:none"></span></div>
   <div id="sync-badge"><span class="dot"></span><span id="sync-text">локально</span></div>
-  <button class="header-btn" onclick="syncPull()" title="Обновить" id="refresh-btn"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
+  <button class="header-btn" onclick="cloudSync()" title="Синхронизировать" id="refresh-btn"><svg viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></button>
   <button class="header-btn" onclick="openSettings()" title="Профиль и настройки"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
 </header>
 <div id="content">
@@ -316,27 +316,54 @@ h3{font-size:14px;font-weight:500;color:var(--text2)}
 </nav>
 </div>
 <div id="toast"></div>
-<div class="modal-overlay hidden" id="onboard-modal">
+<div class="modal-overlay hidden" id="setup-modal">
   <div class="modal">
-    <div class="modal-header"><div style="font-weight:500">Добро пожаловать в FitLog</div></div>
+    <div class="modal-header"><div style="font-weight:500">Подключение к серверу</div></div>
     <div class="modal-body">
-      <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Заполни профиль — он нужен для командной ленты и лидербордов.</p>
-      <div class="form-group"><label class="form-label">Имя</label><input type="text" id="ob-name" placeholder="Как тебя видят в команде"></div>
-      <div class="form-group"><label class="form-label">Пол (для лидербордов)</label>
-        <div class="big-choice">
-          <div class="big-choice-btn" id="ob-g-m" onclick="obPick('gender','m')"><div class="ic">🧔</div><div class="lb">Мужской</div></div>
-          <div class="big-choice-btn" id="ob-g-f" onclick="obPick('gender','f')"><div class="ic">👩</div><div class="lb">Женский</div></div>
-        </div>
-      </div>
-      <div class="form-group"><label class="form-label">Роль</label>
-        <div class="big-choice">
-          <div class="big-choice-btn" id="ob-r-coach" onclick="obPick('role','coach')"><div class="ic">📋</div><div class="lb">Тренер</div><div class="sub">пишет планы</div></div>
-          <div class="big-choice-btn" id="ob-r-athlete" onclick="obPick('role','athlete')"><div class="ic">🏋️</div><div class="lb">Атлет</div><div class="sub">вносит результаты</div></div>
-        </div>
-      </div>
-      <div class="form-group"><label class="form-label">URL синхронизации (необязательно сейчас)</label><input type="text" id="ob-sync" placeholder="https://script.google.com/macros/s/.../exec"><div style="font-size:12px;color:var(--text3);margin-top:6px">Можно добавить позже в настройках. Без него приложение работает локально.</div></div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Вставь данные проекта Supabase (Project Settings → API). URL — <b>базовый</b>, без <code>/rest/v1</code>.</p>
+      <div class="form-group"><label class="form-label">Project URL</label><input type="text" id="sb-url" placeholder="https://xxxx.supabase.co" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      <div class="form-group"><label class="form-label">anon public key</label><input type="text" id="sb-key" placeholder="eyJhbGciOi..."></div>
+      <div style="font-size:12px;color:var(--text3);padding:8px;background:var(--surface2);border-radius:var(--radius)">Нужен ключ <b>publishable</b> (или <b>anon</b>) — он публичный, его безопасно держать в браузере. Ключ <b>secret / service_role</b> вставлять нельзя: он обходит все проверки доступа.</div>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary" onclick="finishOnboard()">Начать</button></div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="saveSetup()">Подключиться</button></div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="auth-modal">
+  <div class="modal">
+    <div class="modal-header"><div style="font-weight:500" id="auth-title">Вход в FitLog</div></div>
+    <div class="modal-body">
+      <div class="seg" style="margin-bottom:16px">
+        <div class="seg-btn active" id="auth-tab-in" onclick="setAuthMode('in')">Вход</div>
+        <div class="seg-btn" id="auth-tab-up" onclick="setAuthMode('up')">Регистрация</div>
+      </div>
+      <div class="form-group"><label class="form-label">Email</label><input type="email" id="auth-email" autocomplete="username" placeholder="you@example.com"></div>
+      <div class="form-group"><label class="form-label">Пароль</label><input type="password" id="auth-pass" autocomplete="current-password" placeholder="минимум 6 символов"></div>
+      <div id="auth-up-fields" style="display:none">
+        <div class="form-group"><label class="form-label">Имя</label><input type="text" id="auth-name" placeholder="Как тебя видят в команде"></div>
+        <div class="form-group"><label class="form-label">Пол (для лидербордов)</label>
+          <div class="big-choice">
+            <div class="big-choice-btn" id="auth-g-m" onclick="authPickGender('m')"><div class="ic">🧔</div><div class="lb">Мужской</div></div>
+            <div class="big-choice-btn" id="auth-g-f" onclick="authPickGender('f')"><div class="ic">👩</div><div class="lb">Женский</div></div>
+          </div>
+        </div>
+      </div>
+      <div id="auth-msg" style="font-size:13px;color:var(--red);min-height:18px"></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:8px">Новые пользователи по умолчанию — атлеты. Тренера назначает администратор, а к тренеру присоединяются по коду приглашения.</div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="openSetup()">Сервер</button>
+      <button class="btn btn-primary" id="auth-submit" onclick="doAuth()">Войти</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay hidden" id="admin-modal">
+  <div class="modal">
+    <div class="modal-header"><div style="font-weight:500">Панель администратора</div><button class="btn-icon" onclick="closeModal('admin-modal')"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px">Роль меняется на сервере. Тренер получает право писать планы и приглашать атлетов.</p>
+      <div id="admin-users"></div>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('admin-modal')">Закрыть</button></div>
   </div>
 </div>
 <div class="modal-overlay hidden" id="test-modal">
@@ -383,33 +410,49 @@ h3{font-size:14px;font-weight:500;color:var(--text2)}
 </div>
 <div class="modal-overlay hidden" id="settings-modal">
   <div class="modal">
-    <div class="modal-header"><div style="font-weight:500">Профиль и настройки</div><button class="btn-icon" onclick="closeModal('settings-modal')"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+    <div class="modal-header"><div style="font-weight:500">Профиль и команда</div><button class="btn-icon" onclick="closeModal('settings-modal')"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
     <div class="modal-body">
+      <div id="set-account" style="font-size:13px;color:var(--text2);margin-bottom:14px"></div>
       <div class="form-group"><label class="form-label">Имя</label><input type="text" id="set-name"></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Пол</label><select id="set-gender"><option value="m">Мужской</option><option value="f">Женский</option></select></div>
-        <div class="form-group"><label class="form-label">Роль</label><select id="set-role"><option value="coach">Тренер</option><option value="athlete">Атлет</option></select></div>
+      <div class="form-group"><label class="form-label">Пол</label><select id="set-gender"><option value="m">Мужской</option><option value="f">Женский</option></select></div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="saveProfile()">Сохранить профиль</button>
+
+      <div id="admin-section" style="display:none">
+        <div class="section-divider">администратор</div>
+        <button class="btn" style="width:100%;justify-content:center" onclick="openAdmin()">Управление пользователями</button>
       </div>
+
+      <div id="coach-section" style="display:none">
+        <div class="section-divider">мои атлеты</div>
+        <div id="coach-athletes" style="margin-bottom:10px"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="makeInvite()">Создать код приглашения</button>
+        <div id="invite-out" style="margin-top:10px"></div>
+      </div>
+
+      <div id="athlete-section" style="display:none">
+        <div class="section-divider">тренер</div>
+        <div id="athlete-coach" style="font-size:13px;color:var(--text2);margin-bottom:10px"></div>
+        <div class="form-group"><label class="form-label">Код приглашения от тренера</label><input type="text" id="join-code" placeholder="A1B2C3" style="text-transform:uppercase"></div>
+        <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doJoin()">Присоединиться</button>
+      </div>
+
       <div class="section-divider">синхронизация</div>
-      <div class="form-group"><label class="form-label">URL (Google Apps Script)</label><input type="text" id="sync-url" placeholder="https://script.google.com/macros/s/.../exec"></div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);margin-bottom:14px;cursor:pointer"><input type="checkbox" id="auto-sync" style="width:auto"> Авто-синхронизация при сохранении</label>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="syncPush()">↑ Отправить</button>
-        <button class="btn btn-primary" style="flex:1;justify-content:center" onclick="syncPull()">↓ Загрузить</button>
-      </div>
-      <button class="btn" style="width:100%;justify-content:center;margin-bottom:12px" onclick="syncDiag()">Проверить, что лежит в облаке</button>
-      <div style="font-size:12px;color:var(--text3);padding:8px;background:var(--surface2);border-radius:var(--radius)">Тренер пишет план и отправляет. Атлеты загружают, вносят свои результаты, отправляют. Лента и лидерборды собираются из данных всех участников.</div>
+      <button class="btn" style="width:100%;justify-content:center;margin-bottom:8px" onclick="cloudSync()">↻ Синхронизировать сейчас</button>
+      <div style="font-size:12px;color:var(--text3);padding:8px;background:var(--surface2);border-radius:var(--radius)">Данные сохраняются на сервере автоматически. Права проверяются на сервере: атлет не может писать планы, а видит только тренировки своего тренера.</div>
+
       <div class="section-divider">резервная копия</div>
       <div style="display:flex;gap:8px">
         <button class="btn" style="flex:1;justify-content:center" onclick="exportJSON()">Скачать JSON</button>
         <label class="btn" style="flex:1;justify-content:center;cursor:pointer">Загрузить JSON<input type="file" accept=".json" style="display:none" onchange="importJSON(event)"></label>
       </div>
-      <div class="section-divider">данные</div>
-      <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="if(confirm('Удалить ВСЕ локальные данные?')){localStorage.clear();location.reload()}">Очистить всё</button>
+
+      <div class="section-divider">аккаунт</div>
+      <button class="btn btn-danger" style="width:100%;justify-content:center" onclick="doSignOut()">Выйти из аккаунта</button>
     </div>
-    <div class="modal-footer"><button class="btn btn-primary" onclick="saveSettings()">Сохранить</button></div>
+    <div class="modal-footer"><button class="btn" onclick="openSetup()">Настройки сервера</button><button class="btn btn-primary" onclick="closeModal('settings-modal')">Готово</button></div>
   </div>
 </div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.0/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
 // ===== КАТАЛОГ ТЕСТОВ ДЛЯ ЛИДЕРБОРДОВ (расширяемый) =====
@@ -463,7 +506,7 @@ var DAILY_COMPLEX=[{name:'Диафрагмальное дыхание',detail:'5
 var COOLDOWN_COMPLEX=[{name:'Голубь',detail:'2–3 мин/сторону'},{name:'Счастливый ребёнок',detail:'60с'},{name:'Лягушка расслабленная',detail:'2–3 мин'},{name:'Ящерица статическая',detail:'90с/сторону'},{name:'Расслабленный вис',detail:'60с'},{name:'Кошка-корова медленно',detail:'8 повт'},{name:'Дыхание 4-7-8',detail:'5 мин'}];
 // ===== STATE =====
 var state=JSON.parse(localStorage.getItem('fitlog_state')||'{}');
-state.profile=state.profile||{name:'',gender:'m',role:'coach'};
+state.profile=state.profile||{id:null,name:'',gender:'m',role:'athlete',coach_id:null};
 state.plans=state.plans||{};          // общие планы: date -> {warmup,blocks:[{id,type,content}],author}
 state.results=state.results||{};      // мои результаты: date -> {byBlock:{id:val},notes}
 state.tests=state.tests||{};          // мои тесты: movementName -> {value,date}
@@ -473,6 +516,12 @@ state.mobilityHistory=state.mobilityHistory||[];
 state.mobilityDone=state.mobilityDone||{};
 state.team=state.team||{};            // кэш из облака: name -> {gender,role,tests,logEntries,mobilityScores,updated}
 state.settings=state.settings||{};
+// Подключение к серверу по умолчанию. Ключ publishable — публичный, его можно хранить в коде.
+// Права доступа решает сервер (RLS), а не ключ. Секретный ключ сюда вставлять НЕЛЬЗЯ.
+var DEFAULT_SB_URL='https://amdbkoerdpnaskndmojb.supabase.co';
+var DEFAULT_SB_KEY='sb_publishable_B96NTQrHA0bv8E8WaZ-h3A_64Jpj3Ps';
+if(!state.settings.sbUrl)state.settings.sbUrl=DEFAULT_SB_URL;
+if(!state.settings.sbKey)state.settings.sbKey=DEFAULT_SB_KEY;
 if(!state.plannerDate)state.plannerDate=todayStr();
 
 var plannerDate=state.plannerDate,planMode='plan';
@@ -494,7 +543,6 @@ function closeModal(id){document.getElementById(id).classList.add('hidden');}
 function badgeCls(t){return{'СИЛОВАЯ':'strength','МЕТКОН':'metcon','НАВЫК':'skill','АЭРОБИКА':'cardio','АНАЭРОБИКА':'metcon','ПОДКАЧКА':'pump'}[t]||'skill';}
 function escHtml(s){return(s==null?'':''+s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function initials(name){return(name||'?').trim().slice(0,2).toUpperCase();}
-function isCoach(){return state.profile.role==='coach';}
 
 // ===== TABS =====
 function switchTab(name){
@@ -509,47 +557,180 @@ function switchTab(name){
   window.scrollTo(0,0);
 }
 
-// ===== ONBOARDING / PROFILE =====
-function obPick(kind,val){obChoice[kind]=val;
-  if(kind==='gender'){document.getElementById('ob-g-m').classList.toggle('selected',val==='m');document.getElementById('ob-g-f').classList.toggle('selected',val==='f');}
-  if(kind==='role'){document.getElementById('ob-r-coach').classList.toggle('selected',val==='coach');document.getElementById('ob-r-athlete').classList.toggle('selected',val==='athlete');}
+// ===== АУТЕНТИФИКАЦИЯ / ПРОФИЛЬ (Supabase) =====
+var sb=null, authMode='in', authGender=null, adminUsers=[];
+function sbReady(){return !!sb;}
+function normalizeSbUrl(raw){
+  var u=(raw||'').trim();
+  if(!u)return '';
+  u=u.replace(/\s+/g,'');
+  if(!/^https?:\/\//i.test(u))u='https://'+u;
+  try{
+    var p=new URL(u);
+    return p.protocol+'//'+p.host; // отбрасываем /rest/v1, /auth/v1, слэши и query
+  }catch(e){
+    return u.replace(/\/(rest|auth|storage|realtime)\/v\d.*$/i,'').replace(/\/+$/,'');
+  }
 }
-function finishOnboard(){
-  var name=document.getElementById('ob-name').value.trim();
-  if(!name){toast('Введи имя');return;}
-  if(!obChoice.gender){toast('Выбери пол');return;}
-  if(!obChoice.role){toast('Выбери роль');return;}
-  state.profile={name:name,gender:obChoice.gender,role:obChoice.role};
-  var su=document.getElementById('ob-sync').value.trim();if(su)state.settings.syncUrl=su;
-  save();closeModal('onboard-modal');applyProfile();
-  if(state.settings.syncUrl)syncPull();else init();
-  toast('Профиль создан. Привет, '+name+'!');
+function initSb(){
+  var u=normalizeSbUrl(state.settings.sbUrl),k=(state.settings.sbKey||'').trim();
+  if(!u||!k){sb=null;return false;}
+  try{sb=window.supabase.createClient(u,k);return true;}catch(e){sb=null;return false;}
 }
+function openSetup(){document.getElementById('sb-url').value=state.settings.sbUrl||'';document.getElementById('sb-key').value=state.settings.sbKey||'';document.getElementById('setup-modal').classList.remove('hidden');}
+function saveSetup(){
+  var raw=document.getElementById('sb-url').value;
+  var url=normalizeSbUrl(raw);
+  var key=document.getElementById('sb-key').value.trim();
+  if(!url||!key){toast('Заполни URL и ключ');return;}
+  if(!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(url)&&!/localhost|127\.0\.0\.1/.test(url)){
+    if(!confirm('Адрес не похож на проект Supabase:\n'+url+'\n\nОжидается вид https://xxxx.supabase.co\nВсё равно продолжить?'))return;
+  }
+  if(/^sb_secret_/i.test(key)||/service_role/i.test(key)){toast('Это секретный ключ! Нужен publishable / anon ключ');return;}
+  state.settings.sbUrl=url;state.settings.sbKey=key;
+  save();closeModal('setup-modal');
+  if(initSb()){toast('Сервер подключён: '+url);bootAuth();}else toast('Не удалось подключиться — проверь URL и ключ');
+}
+function setAuthMode(m){authMode=m;
+  document.getElementById('auth-tab-in').classList.toggle('active',m==='in');
+  document.getElementById('auth-tab-up').classList.toggle('active',m==='up');
+  document.getElementById('auth-up-fields').style.display=(m==='up')?'block':'none';
+  document.getElementById('auth-submit').textContent=(m==='up')?'Зарегистрироваться':'Войти';
+  document.getElementById('auth-title').textContent=(m==='up')?'Регистрация в FitLog':'Вход в FitLog';
+  document.getElementById('auth-msg').textContent='';
+}
+function authPickGender(g){authGender=g;document.getElementById('auth-g-m').classList.toggle('selected',g==='m');document.getElementById('auth-g-f').classList.toggle('selected',g==='f');}
+function authErr(m){document.getElementById('auth-msg').textContent=m||'';}
+function friendlyAuthErr(msg){
+  msg=msg||'';
+  if(/Invalid path specified in request URL/i.test(msg))return 'Неверный адрес проекта. Нужен базовый URL вида https://xxxx.supabase.co (без /rest/v1). Нажми «Сервер» и исправь.';
+  if(/Invalid API key|No API key/i.test(msg))return 'Неверный ключ. Нужен publishable (anon) ключ из Project Settings → API.';
+  if(/Failed to fetch|NetworkError/i.test(msg))return 'Нет связи с сервером. Проверь адрес проекта и интернет.';
+  if(/User already registered/i.test(msg))return 'Такой email уже зарегистрирован — используй вкладку «Вход».';
+  if(/Password should be at least/i.test(msg))return 'Пароль слишком короткий (минимум 6 символов).';
+  if(/Email not confirmed/i.test(msg))return 'Email не подтверждён. Проверь почту или отключи подтверждение в Supabase.';
+  if(/Invalid login credentials/i.test(msg))return 'Неверный email или пароль.';
+  return msg;
+}
+function doAuth(){
+  if(!sbReady()){openSetup();return;}
+  var email=document.getElementById('auth-email').value.trim();
+  var pass=document.getElementById('auth-pass').value;
+  if(!email||!pass){authErr('Введи email и пароль');return;}
+  authErr('');
+  if(authMode==='up'){
+    var name=document.getElementById('auth-name').value.trim();
+    if(!name){authErr('Введи имя');return;}
+    if(!authGender){authErr('Выбери пол');return;}
+    sb.auth.signUp({email:email,password:pass,options:{data:{name:name,gender:authGender}}}).then(function(res){
+      if(res.error){authErr(friendlyAuthErr(res.error.message));return;}
+      if(!res.data.session){authErr('Проверь почту и подтверди адрес, затем войди');setAuthMode('in');return;}
+      afterAuth();
+    }).catch(function(e){authErr(friendlyAuthErr(e&&e.message));});
+  }else{
+    sb.auth.signInWithPassword({email:email,password:pass}).then(function(res){
+      if(res.error){authErr(friendlyAuthErr(res.error.message));return;}
+      afterAuth();
+    }).catch(function(e){authErr(friendlyAuthErr(e&&e.message));});
+  }
+}
+function doSignOut(){if(sb)sb.auth.signOut();state.profile={id:null,name:'',gender:'m',role:'athlete',coach_id:null};state.team={};save();closeModal('settings-modal');location.reload();}
+function afterAuth(){closeModal('auth-modal');cloudSync(true);}
+function bootAuth(){
+  if(!sbReady()){document.getElementById('setup-modal').classList.remove('hidden');return;}
+  sb.auth.getSession().then(function(r){
+    if(r.data&&r.data.session)cloudSync(true);
+    else{document.getElementById('auth-modal').classList.remove('hidden');init();}
+  });
+}
+function isAdmin(){return state.profile.role==='admin';}
+function isCoach(){return state.profile.role==='coach'||state.profile.role==='admin';}
+function roleLabel(r){return{admin:'Админ',coach:'Тренер',athlete:'Атлет'}[r]||'Атлет';}
 function applyProfile(){
   var pill=document.getElementById('role-pill');
-  if(state.profile.name){pill.style.display='';pill.textContent=isCoach()?'Тренер':'Атлет';}
+  if(state.profile.name){pill.style.display='';pill.textContent=roleLabel(state.profile.role);}else pill.style.display='none';
   document.getElementById('mode-plan').style.display=isCoach()?'block':'none';
-  document.getElementById('mode-result').style.borderRadius=isCoach()?'':'6px';
-  if(!isCoach()){planMode='result';}
-  document.getElementById('add-block-btn').style.display=(isCoach()&&planMode==='plan')?'flex':'none';
+  if(!isCoach())planMode='result';
+  var ab=document.getElementById('add-block-btn');
+  if(ab)ab.style.display=(isCoach()&&planMode==='plan')?'flex':'none';
 }
 function openSettings(){
+  if(!state.profile.id){bootAuth();return;}
   document.getElementById('set-name').value=state.profile.name||'';
   document.getElementById('set-gender').value=state.profile.gender||'m';
-  document.getElementById('set-role').value=state.profile.role||'coach';
-  document.getElementById('sync-url').value=state.settings.syncUrl||'';
-  document.getElementById('auto-sync').checked=!!state.settings.autoSync;
+  document.getElementById('set-account').textContent='Роль: '+roleLabel(state.profile.role)+(state.profile.email?(' · '+state.profile.email):'');
+  document.getElementById('admin-section').style.display=isAdmin()?'block':'none';
+  document.getElementById('coach-section').style.display=isCoach()?'block':'none';
+  document.getElementById('athlete-section').style.display=(state.profile.role==='athlete')?'block':'none';
+  if(isCoach())renderCoachAthletes();
+  if(state.profile.role==='athlete'){
+    var cn=state.profile.coachName;
+    document.getElementById('athlete-coach').textContent=cn?('Твой тренер: '+cn):'Тренер не назначен — введи код приглашения.';
+  }
+  document.getElementById('invite-out').innerHTML='';
   document.getElementById('settings-modal').classList.remove('hidden');
 }
-function saveSettings(){
-  state.profile.name=document.getElementById('set-name').value.trim()||state.profile.name;
-  state.profile.gender=document.getElementById('set-gender').value;
-  state.profile.role=document.getElementById('set-role').value;
-  state.settings.syncUrl=document.getElementById('sync-url').value.trim();
-  state.settings.autoSync=document.getElementById('auto-sync').checked;
-  save();updateSyncBadge();applyProfile();closeModal('settings-modal');
-  loadPlan();toast('Сохранено');
-  if(state.settings.syncUrl)syncPull();
+function renderCoachAthletes(){
+  var names=Object.keys(state.team);
+  var h=names.length?'':'<div style="font-size:13px;color:var(--text3)">Пока нет атлетов. Создай код приглашения.</div>';
+  names.forEach(function(n){var u=state.team[n];h+='<div style="display:flex;align-items:center;gap:8px;padding:4px 0"><span class="avatar '+(u.gender||'m')+'">'+initials(n)+'</span><span style="font-size:13px">'+escHtml(n)+'</span></div>';});
+  document.getElementById('coach-athletes').innerHTML=h;
+}
+function saveProfile(){
+  var name=document.getElementById('set-name').value.trim();
+  var gender=document.getElementById('set-gender').value;
+  if(!name){toast('Имя не может быть пустым');return;}
+  if(!sbReady()){toast('Нет подключения');return;}
+  sb.from('profiles').update({name:name,gender:gender}).eq('id',state.profile.id).then(function(r){
+    if(r.error){toast('Ошибка: '+r.error.message);return;}
+    state.profile.name=name;state.profile.gender=gender;save();applyProfile();toast('Профиль сохранён');
+  });
+}
+// ---- админ ----
+function openAdmin(){
+  if(!isAdmin()||!sbReady())return;
+  document.getElementById('admin-users').innerHTML='<div style="color:var(--text3);font-size:13px">Загрузка…</div>';
+  document.getElementById('admin-modal').classList.remove('hidden');
+  sb.rpc('admin_list_users').then(function(r){
+    if(r.error){document.getElementById('admin-users').innerHTML='<div style="color:var(--red);font-size:13px">'+escHtml(r.error.message)+'</div>';return;}
+    adminUsers=r.data||[];renderAdminUsers();
+  });
+}
+function renderAdminUsers(){
+  var h='';
+  adminUsers.forEach(function(u){
+    var opts=['athlete','coach','admin'].map(function(r){return '<option value="'+r+'" '+(u.role===r?'selected':'')+'>'+roleLabel(r)+'</option>';}).join('');
+    h+='<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">'
+      +'<span class="avatar '+(u.gender||'m')+'">'+initials(u.name||'?')+'</span>'
+      +'<div style="flex:1;min-width:0"><div style="font-size:14px">'+escHtml(u.name||'(без имени)')+'</div>'
+      +(u.coach_name?'<div style="font-size:11px;color:var(--text3)">тренер: '+escHtml(u.coach_name)+'</div>':'')+'</div>'
+      +'<select style="width:auto;font-size:12px" onchange="setRole(\''+u.id+'\',this.value)"'+(u.id===state.profile.id?' disabled':'')+'>'+opts+'</select></div>';
+  });
+  document.getElementById('admin-users').innerHTML=h||'<div style="color:var(--text3);font-size:13px">Нет пользователей</div>';
+}
+function setRole(id,role){
+  sb.rpc('admin_set_role',{target:id,new_role:role}).then(function(r){
+    if(r.error){toast('Ошибка: '+r.error.message);openAdmin();return;}
+    toast('Роль обновлена: '+roleLabel(role));openAdmin();
+  });
+}
+// ---- приглашения ----
+function makeInvite(){
+  if(!sbReady())return;
+  sb.rpc('create_invite').then(function(r){
+    if(r.error){toast('Ошибка: '+r.error.message);return;}
+    document.getElementById('invite-out').innerHTML='<div style="background:var(--accent-bg);border:1px solid rgba(232,213,163,0.3);border-radius:var(--radius);padding:12px;text-align:center"><div style="font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">Код приглашения · 14 дней</div><div style="font-family:var(--mono);font-size:24px;color:var(--accent);letter-spacing:2px;margin-top:4px">'+escHtml(r.data)+'</div></div>';
+  });
+}
+function doJoin(){
+  var code=document.getElementById('join-code').value.trim();
+  if(!code){toast('Введи код');return;}
+  if(!sbReady())return;
+  sb.rpc('join_team',{invite_code:code}).then(function(r){
+    if(r.error){toast(r.error.message);return;}
+    toast('Ты в команде тренера: '+r.data);
+    closeModal('settings-modal');cloudSync(true);
+  });
 }
 // ===== MOBILITY =====
 function startMobilityTest(){testStep=0;testScores=Object.assign({},state.mobilityScores);MOBILITY_TESTS.forEach(function(t){if(!testScores[t.id])testScores[t.id]=3;});document.getElementById('test-modal').classList.remove('hidden');renderTestStep();}
@@ -672,8 +853,8 @@ function blockEditor(b){
   var topts='';BLOCK_TYPES.forEach(function(tp){topts+='<option '+(tp===t?'selected':'')+'>'+tp+'</option>';});
   return'<div class="plan-block plan-block-edit" data-id="'+id+'"><div class="plan-block-top"><select class="block-type-val" style="width:auto;font-weight:500;font-size:13px" onchange="bType(\''+id+'\',this.value)">'+topts+'</select><button class="btn btn-danger" style="margin-left:auto" onclick="removeBlock(\''+id+'\')">Удалить</button></div><div class="plan-block-body">'+body+'</div></div>';
 }
-function bSet(id,field,val){var b=blkById(id);if(!b)return;ensureD(b);b.d[field]=val;touchPlan();save();}
-function bItemSet(id,i,field,val){var b=blkById(id);if(!b)return;ensureD(b);if(b.d.items&&b.d.items[i]){b.d.items[i][field]=val;touchPlan();save();}}
+function bSet(id,field,val){var b=blkById(id);if(!b)return;ensureD(b);b.d[field]=val;touchPlan();save();debouncedSync();}
+function bItemSet(id,i,field,val){var b=blkById(id);if(!b)return;ensureD(b);if(b.d.items&&b.d.items[i]){b.d.items[i][field]=val;touchPlan();save();debouncedSync();}}
 function bType(id,val){var b=blkById(id);if(!b)return;b.type=val;b.d=defaultD(val);delete b.content;touchPlan();save();renderPlanBlocks();}
 function bMethod(id,val){var b=blkById(id);if(!b)return;ensureD(b);b.d.method=val;touchPlan();save();renderPlanBlocks();}
 function bAddItem(id){var b=blkById(id);if(!b)return;ensureD(b);if(!b.d.items)b.d.items=[];b.d.items.push(defaultItem(b.type));touchPlan();save();renderPlanBlocks();}
@@ -697,9 +878,9 @@ function othersResults(date,blockId){var out='';var team=teamUsers();Object.keys
 function genId(){return 'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,8);}
 function ensureBlockIds(date){var pl=state.plans[date];if(!pl||!pl.blocks)return false;var seen={},changed=false;pl.blocks.forEach(function(b){if(!b.id||b.id==='undefined'||seen[b.id]){b.id=genId();changed=true;}seen[b.id]=true;});return changed;}
 function migrateBlockIds(){var changed=false;Object.keys(state.plans).forEach(function(d){if(ensureBlockIds(d))changed=true;});if(changed)save();}
-function saveResultInline(id,val){ensureResults();var r=state.results[plannerDate];r.byBlock[id]=val;r.meta=r.meta||{};var b=blkById(id);if(b)r.meta[id]={type:b.type,text:formatBlockText(b)};save();}
+function saveResultInline(id,val){ensureResults();var r=state.results[plannerDate];r.byBlock[id]=val;r.meta=r.meta||{};var b=blkById(id);if(b)r.meta[id]={type:b.type,text:formatBlockText(b)};save();debouncedSync();}
 function addPlanBlock(){if(!isCoach())return;ensurePlan();var t='СИЛОВАЯ';state.plans[plannerDate].blocks.push({id:genId(),type:t,d:defaultD(t)});state.plans[plannerDate].author=state.profile.name;touchPlan();save();renderPlanBlocks();}
-function removeBlock(id){ensurePlan();state.plans[plannerDate].blocks=state.plans[plannerDate].blocks.filter(function(b){return b.id!==id;});touchPlan();save();renderPlanBlocks();}
+function removeBlock(id){ensurePlan();state.plans[plannerDate].blocks=state.plans[plannerDate].blocks.filter(function(b){return b.id!==id;});touchPlan();save();if(!planHasContent(plannerDate)){var d=plannerDate;pruneEmptyPlans();serverDeletePlan(d);}renderPlanBlocks();debouncedSync();}
 function blockIsEmpty(b){
   if(!b)return true;
   if(b.content&&b.content.trim())return false;
@@ -727,7 +908,7 @@ function savePlan(){savePlanFromDOM();save();toast('✓ Сохранено');ren
 function renderPlannerHistory(){var wrap=document.getElementById('planner-history');var sorted=Object.keys(state.plans).filter(function(d){return d!==plannerDate&&state.plans[d].blocks&&state.plans[d].blocks.length;}).sort(function(a,b){return b>a?1:-1;}).slice(0,5);if(!sorted.length){wrap.innerHTML='<div class="empty" style="padding:20px"><p>Нет планов</p></div>';return;}var h='';sorted.forEach(function(d){var p=state.plans[d];h+='<div class="card" style="margin-bottom:8px;cursor:pointer" onclick="loadHistoryPlan(\''+d+'\')"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:13px;font-weight:500">'+fmtDate(d)+'</span><div style="display:flex;gap:4px;flex-wrap:wrap">';(p.blocks||[]).forEach(function(b){h+='<span class="badge badge-'+badgeCls(b.type)+'">'+b.type+'</span>';});h+='</div></div>';(p.blocks||[]).slice(0,2).forEach(function(b){var lab=blockLabel(b);if(lab)h+='<div style="font-size:12px;color:var(--text2)">'+escHtml(lab)+'</div>';});h+='</div>';});wrap.innerHTML=h;}
 function loadHistoryPlan(d){savePlanSilent();plannerDate=d;save();updatePlannerDateLabel();loadPlan();toast('Загружено: '+fmtDate(d));window.scrollTo(0,0);}
 // ===== ОБЩИЕ ДАННЫЕ КОМАНДЫ =====
-function myUserData(){return{gender:state.profile.gender,role:state.profile.role,tests:state.tests,logEntries:state.logEntries,results:state.results,mobilityScores:state.mobilityScores,mobilityHistory:state.mobilityHistory,mobilityDone:state.mobilityDone,updated:Date.now()};}
+function myUserData(){return{gender:state.profile.gender,role:state.profile.role,tests:state.tests,logEntries:state.logEntries,results:state.results,mobilityScores:state.mobilityScores,mobilityHistory:state.mobilityHistory,mobilityDone:state.mobilityDone};}
 function teamUsers(){var t=Object.assign({},state.team);if(state.profile.name)t[state.profile.name]=myUserData();return t;}
 // ===== ТЕСТЫ / ЛИДЕРБОРД =====
 function setTestsView(v){testsView=v;document.getElementById('tests-mine').classList.toggle('active',v==='mine');document.getElementById('tests-board').classList.toggle('active',v==='board');document.getElementById('tests-mine-view').style.display=v==='mine'?'':'none';document.getElementById('tests-board-view').style.display=v==='board'?'':'none';renderTests();}
@@ -747,7 +928,7 @@ function renderMyTests(){
 }
 function openTestRec(nameEnc){var name=decodeURIComponent(nameEnc);var mv=findMovement(name);if(!mv)return;testrecCurrent=name;var rec=state.tests[name];document.getElementById('testrec-title').textContent='Результат теста';document.getElementById('testrec-mv').textContent=name;var hint=mv.u==='time'?'Формат ММ:СС (например 7:45)':mv.u==='kg'?'В килограммах':mv.u==='cal'?'В калориях':mv.u==='cm'?'В сантиметрах':'Число повторений';document.getElementById('testrec-hint').textContent=hint;document.getElementById('testrec-label').textContent='Результат ('+(unitLabel(mv.u)||'ММ:СС')+')';var inp=document.getElementById('testrec-value');inp.value=rec?rec.value:'';inp.setAttribute('inputmode',mv.u==='time'?'text':'decimal');document.getElementById('testrec-date').value=rec?rec.date:todayStr();document.getElementById('testrec-del').style.display=rec?'inline-flex':'none';document.getElementById('testrec-modal').classList.remove('hidden');}
 function saveTestRec(){var name=testrecCurrent;var mv=findMovement(name);var raw=document.getElementById('testrec-value').value.trim();if(!raw){toast('Введи результат');return;}if(parseTestVal(mv.u,raw)==null){toast('Неверный формат');return;}state.tests[name]={value:raw,date:document.getElementById('testrec-date').value};save();closeModal('testrec-modal');renderTests();toast('✓ Записано в тесты');maybeAutoSync();}
-function deleteTestRec(){if(testrecCurrent){delete state.tests[testrecCurrent];save();closeModal('testrec-modal');renderTests();toast('Удалено');maybeAutoSync();}}
+function deleteTestRec(){if(testrecCurrent){var mv=testrecCurrent;delete state.tests[mv];save();serverDeleteTest(mv);closeModal('testrec-modal');renderTests();toast('Удалено');}}
 function renderLeaderboard(){
   var team=teamUsers();var h='';
   TEST_CATEGORIES.forEach(function(cat){
@@ -797,103 +978,108 @@ function renderStreak(){var dates=Object.keys(state.results).filter(function(d){
 function renderVolumeChart(){var es=state.logEntries.filter(function(e){return e.type==='СИЛОВАЯ'&&e.weight&&e.reps&&e.sets;}).sort(function(a,b){return a.date>b.date?1:-1;}).slice(-12);var ctx=document.getElementById('volume-chart').getContext('2d');if(volumeChart)volumeChart.destroy();if(!es.length)return;volumeChart=new Chart(ctx,{type:'bar',data:{labels:es.map(function(e){return fmtShort(e.date);}),datasets:[{data:es.map(function(e){return Math.round(e.weight*e.reps*e.sets);}),backgroundColor:'rgba(232,213,163,0.3)',borderColor:'#e8d5a3',borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9a9890',font:{size:11},maxRotation:45},grid:{display:false}},y:{ticks:{color:'#9a9890',font:{size:11}},grid:{color:'rgba(255,255,255,0.05)'}}}}});}
 function renderMobilityChart(){var hist=state.mobilityHistory.slice(-12);var ctx=document.getElementById('mobility-chart').getContext('2d');if(mobilityChart)mobilityChart.destroy();if(!hist.length)return;mobilityChart=new Chart(ctx,{type:'line',data:{labels:hist.map(function(h){return fmtShort(h.date);}),datasets:[{data:hist.map(function(h){return h.avg;}),borderColor:'#4caf80',backgroundColor:'rgba(76,175,128,0.1)',borderWidth:2,pointBackgroundColor:'#4caf80',pointRadius:4,fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9a9890',font:{size:11}},grid:{display:false}},y:{min:1,max:5,ticks:{color:'#9a9890',font:{size:11},stepSize:1},grid:{color:'rgba(255,255,255,0.05)'}}}}});}
 function renderCardioChart(){var es=state.logEntries.filter(function(e){return(e.type==='АЭРОБИКА'||e.type==='АНАЭРОБИКА')&&e.result&&e.result.match(/\d+:\d{2}/);}).sort(function(a,b){return a.date>b.date?1:-1;}).slice(-10);var ctx=document.getElementById('cardio-chart').getContext('2d');if(cardioChart)cardioChart.destroy();if(!es.length)return;function pc(s){var m=s.match(/(\d+):(\d{2})/);return m?(+m[1]*60+ +m[2]):null;}var paces=es.map(function(e){return pc(e.result);}).filter(Boolean);cardioChart=new Chart(ctx,{type:'line',data:{labels:es.map(function(e){return fmtShort(e.date);}),datasets:[{data:paces,borderColor:'#6098d8',backgroundColor:'rgba(96,152,216,0.1)',borderWidth:2,pointBackgroundColor:'#6098d8',pointRadius:4,fill:true,tension:0.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#9a9890',font:{size:11}},grid:{display:false}},y:{ticks:{color:'#9a9890',font:{size:11},callback:function(v){var m=Math.floor(v/60);return m+':'+pad2(v%60);}},grid:{color:'rgba(255,255,255,0.05)'},reverse:true}}}});}
-// ===== СИНХРОНИЗАЦИЯ (много пользователей, слияние) =====
-function updateSyncBadge(){var b=document.getElementById('sync-badge'),t=document.getElementById('sync-text');if(state.settings.syncUrl){b.classList.add('online');t.textContent='синхр.';}else{b.classList.remove('online');t.textContent='локально';}}
+// ===== СИНХРОНИЗАЦИЯ (Supabase, права проверяет сервер) =====
+function updateSyncBadge(){var b=document.getElementById('sync-badge'),t=document.getElementById('sync-text');
+  if(state.profile.id){b.classList.add('online');t.textContent='онлайн';}else{b.classList.remove('online');t.textContent='оффлайн';}}
 function setSyncing(on){document.getElementById('sync-badge').classList.toggle('syncing',on);}
-function syncPush(){
-  var url=state.settings.syncUrl;if(!url){toast('Добавь URL в настройках');return;}
-  if(!state.profile.name){toast('Сначала укажи имя');return;}
+function sbErr(r,what){if(r&&r.error){toast(what+': '+r.error.message);return true;}return false;}
+
+function cloudSync(silent){
+  if(!sbReady()){bootAuth();return Promise.resolve();}
   setSyncing(true);
-  fetch(url,{method:'GET'})
-    .then(function(r){return r.json();})
-    .then(function(store){mergeStore(store);})
-    .catch(function(){})
-    .then(function(){
-      pruneEmptyPlans();
-      Object.keys(state.plans).forEach(function(d){if(!state.plans[d].updated)state.plans[d].updated=Date.now();});
+  return pushMine().then(pullAll).then(function(){
+    if(!silent)toast('↻ Синхронизировано');
+    init();
+  }).catch(function(e){
+    toast((e&&e.message)?e.message:'Ошибка синхронизации');
+  }).finally(function(){setSyncing(false);});
+}
+
+function pullAll(){
+  return sb.auth.getUser().then(function(u){
+    if(!u.data||!u.data.user){document.getElementById('auth-modal').classList.remove('hidden');throw new Error('Нужен вход');}
+    var uid=u.data.user.id, email=u.data.user.email;
+    return sb.from('profiles').select('*').then(function(pr){
+      if(pr.error)throw pr.error;
+      var profiles=pr.data||[];
+      var me=profiles.filter(function(p){return p.id===uid;})[0];
+      if(!me)throw new Error('Профиль не найден');
+      state.profile={id:me.id,email:email,name:me.name,gender:me.gender,role:me.role,coach_id:me.coach_id};
+      var teamId=(me.role==='athlete')?me.coach_id:me.id;
+      var coach=profiles.filter(function(p){return p.id===me.coach_id;})[0];
+      state.profile.coachName=coach?coach.name:null;
       save();
-      var payload={user:state.profile.name,userData:myUserData()};
-      if(isCoach())payload.plans=state.plans;
-      return fetch(url,{method:'POST',body:JSON.stringify(payload),headers:{'Content-Type':'text/plain;charset=utf-8'}});
-    })
-    .then(function(r){return r.text();})
-    .then(function(txt){
-      var store;
-      try{store=JSON.parse(txt);}catch(e){throw new Error('Скрипт вернул не JSON: '+txt.slice(0,140));}
-      if(store&&store.error)throw new Error('Скрипт: '+store.error);
-      mergeStore(store);toast('↑ Отправлено');init();
-    })
-    .catch(function(e){toast((e&&e.message)?e.message:'Ошибка отправки. Проверь URL и доступ скрипта');})
-    .finally(function(){setSyncing(false);});
-}
-function syncDiag(){
-  var url=state.settings.syncUrl;if(!url){alert('URL синхронизации не задан');return;}
-  fetch(url,{method:'GET'}).then(function(r){return r.text();}).then(function(txt){
-    var s;try{s=JSON.parse(txt);}catch(e){alert('Ответ скрипта не JSON:\n\n'+txt.slice(0,400));return;}
-    var users=Object.keys(s.users||{});
-    var plans=Object.keys(s.plans||{}).sort();
-    var lines=['РАЗМЕР ОТВЕТА: '+txt.length+' байт','','УЧАСТНИКИ ('+users.length+'):'];
-    users.forEach(function(u){var ud=s.users[u]||{};lines.push('  • '+u+' — тестов: '+Object.keys(ud.tests||{}).length+', записей: '+((ud.logEntries||[]).length)+', дней с результатами: '+Object.keys(ud.results||{}).length);});
-    lines.push('','ПЛАНЫ В ОБЛАКЕ ('+plans.length+'):');
-    plans.slice(-10).forEach(function(d){var p=s.plans[d]||{};lines.push('  • '+d+' — заданий: '+((p.blocks||[]).length)+(p.updated?'':'  (без метки времени)'));});
-    if(!plans.length)lines.push('  ПУСТО — планы не сохранены в облаке.');
-    alert(lines.join('\n'));
-  }).catch(function(){alert('Не удалось получить данные. Проверь URL и доступ скрипта.');});
-}
-function syncPull(){
-  var url=state.settings.syncUrl;if(!url){init();return;}
-  setSyncing(true);
-  fetch(url,{method:'GET'})
-    .then(function(r){return r.json();})
-    .then(function(store){mergeStore(store);toast('↓ Обновлено');})
-    .catch(function(){toast('Ошибка загрузки. Проверь URL');})
-    .finally(function(){setSyncing(false);init();});
-}
-function mergeMine(c){
-  if(!c||typeof c!=='object')return;
-  state.logEntries=state.logEntries||[];
-  var seen={};state.logEntries.forEach(function(e){seen[e.id]=true;});
-  (c.logEntries||[]).forEach(function(e){if(e&&!seen[e.id]){state.logEntries.push(e);seen[e.id]=true;}});
-  state.logEntries.sort(function(a,b){return (b.id||0)-(a.id||0);});
-  state.tests=state.tests||{};var ct=c.tests||{};
-  Object.keys(ct).forEach(function(k){var loc=state.tests[k],rem=ct[k];if(!loc){state.tests[k]=rem;}else if((rem.date||'')>(loc.date||'')){state.tests[k]=rem;}});
-  state.results=state.results||{};var cr=c.results||{};
-  Object.keys(cr).forEach(function(d){var rr=cr[d]||{};if(!state.results[d])state.results[d]={byBlock:{},notes:''};var lb=state.results[d].byBlock||{},rb=rr.byBlock||{};Object.keys(rb).forEach(function(bid){if(!lb[bid])lb[bid]=rb[bid];});state.results[d].byBlock=lb;var lm=state.results[d].meta||{},rm=rr.meta||{};Object.keys(rm).forEach(function(bid){if(!lm[bid])lm[bid]=rm[bid];});state.results[d].meta=lm;if(!state.results[d].notes&&rr.notes)state.results[d].notes=rr.notes;});
-  state.mobilityHistory=state.mobilityHistory||[];var have={};state.mobilityHistory.forEach(function(x){have[x.date]=true;});
-  (c.mobilityHistory||[]).forEach(function(x){if(x&&!have[x.date]){state.mobilityHistory.push(x);have[x.date]=true;}});
-  state.mobilityHistory.sort(function(a,b){return a.date>b.date?1:-1;});
-  if(!Object.keys(state.mobilityScores||{}).length){state.mobilityScores=(c.mobilityScores&&Object.keys(c.mobilityScores).length)?c.mobilityScores:(state.mobilityHistory.length?(state.mobilityHistory[state.mobilityHistory.length-1].scores||{}):{});}
-  state.mobilityDone=state.mobilityDone||{};var cd=c.mobilityDone||{};
-  Object.keys(cd).forEach(function(d){if(!state.mobilityDone[d])state.mobilityDone[d]=cd[d];});
-}
-function mergePlans(cloudPlans){
-  if(!cloudPlans)return;
-  Object.keys(cloudPlans).forEach(function(d){
-    var rem=cloudPlans[d];if(!rem)return;
-    var remBlocks=planBlockCount(rem);
-    var remHas=remBlocks>0||(rem.warmup&&rem.warmup.trim());
-    if(!remHas)return;
-    var loc=state.plans[d];
-    var locHas=planHasContent(d);
-    if(!locHas){state.plans[d]=rem;return;}
-    if(!isCoach()){state.plans[d]=rem;return;}
-    var lu=(loc&&loc.updated)||0,ru=rem.updated||0;
-    if(ru>lu){state.plans[d]=rem;return;}
-    // старые записи без метки времени: побеждает более полный план
-    if(!lu&&!ru&&remBlocks>planBlockCount(loc))state.plans[d]=rem;
+
+      return Promise.all([
+        sb.from('plans').select('*'),
+        sb.from('results').select('*'),
+        sb.from('tests').select('*'),
+        sb.from('log_entries').select('*'),
+        sb.from('mobility').select('*')
+      ]).then(function(res){
+        res.forEach(function(r){if(r.error)throw r.error;});
+        var plans=res[0].data||[],results=res[1].data||[],tests=res[2].data||[],logs=res[3].data||[],mob=res[4].data||[];
+
+        // планы моей команды (у админа их может быть несколько — берём свою команду)
+        var myPlans={};
+        plans.filter(function(p){return p.coach_id===teamId;}).forEach(function(p){
+          myPlans[p.date]={warmup:p.warmup||'',blocks:p.blocks||[],author:'',updated:new Date(p.updated_at).getTime()};
+        });
+        state.plans=myPlans;
+
+        // видимые пользователи = профили, отданные сервером (RLS уже отфильтровал)
+        var byId={};profiles.forEach(function(p){byId[p.id]={name:p.name,gender:p.gender,role:p.role,tests:{},logEntries:[],results:{},mobilityScores:{},mobilityHistory:[]};});
+        results.forEach(function(r){if(byId[r.user_id])byId[r.user_id].results[r.date]={byBlock:r.by_block||{},meta:r.meta||{},notes:r.notes||''};});
+        tests.forEach(function(t){if(byId[t.user_id])byId[t.user_id].tests[t.movement]={value:t.value,date:t.date};});
+        logs.forEach(function(l){if(byId[l.user_id])byId[l.user_id].logEntries.push({id:Number(l.id),date:l.date,type:l.type,exercise:l.exercise,result:l.result,weight:l.weight,reps:l.reps,sets:l.sets,pr:l.pr,comment:l.comment});});
+        mob.forEach(function(m){if(byId[m.user_id]){byId[m.user_id].mobilityScores=m.scores||{};byId[m.user_id].mobilityHistory=m.history||[];}});
+        Object.keys(byId).forEach(function(id){byId[id].logEntries.sort(function(a,b){return b.id-a.id;});});
+
+        // мои данные
+        var mine=byId[uid];
+        state.tests=mine.tests;state.logEntries=mine.logEntries;state.results=mine.results;
+        state.mobilityScores=mine.mobilityScores;state.mobilityHistory=mine.mobilityHistory;
+
+        // команда (все, кроме меня)
+        var team={};Object.keys(byId).forEach(function(id){if(id!==uid)team[byId[id].name]=byId[id];});
+        state.team=team;
+
+        migrateBlockIds();backfillResultMeta();save();
+      });
+    });
   });
 }
-function mergeStore(store){
-  if(!store||typeof store!=='object')return;
-  if(!store.users&&store.user&&store.userData){var tmp={users:{},plans:store.plans||{}};tmp.users[store.user]=store.userData;store=tmp;}
-  var myName=state.profile.name;
-  if(store.users){var team={};Object.keys(store.users).forEach(function(nm){if(nm===myName){mergeMine(store.users[nm]);}else{team[nm]=store.users[nm];}});state.team=team;}
-  mergePlans(store.plans);
-  pruneEmptyPlans();
-  migrateBlockIds();
-  save();
+
+function pushMine(){
+  if(!sbReady()||!state.profile.id)return Promise.resolve();
+  var uid=state.profile.id,jobs=[];
+  // планы — только тренер/админ
+  if(isCoach()){
+    pruneEmptyPlans();
+    var rows=Object.keys(state.plans).map(function(d){return{coach_id:uid,date:d,warmup:state.plans[d].warmup||'',blocks:state.plans[d].blocks||[],updated_at:new Date(state.plans[d].updated||Date.now()).toISOString()};});
+    if(rows.length)jobs.push(sb.from('plans').upsert(rows,{onConflict:'coach_id,date'}));
+  }
+  var rrows=Object.keys(state.results).map(function(d){var r=state.results[d];return{user_id:uid,date:d,by_block:r.byBlock||{},meta:r.meta||{},notes:r.notes||''};});
+  if(rrows.length)jobs.push(sb.from('results').upsert(rrows,{onConflict:'user_id,date'}));
+  var trows=Object.keys(state.tests).map(function(m){return{user_id:uid,movement:m,value:state.tests[m].value,date:state.tests[m].date};});
+  if(trows.length)jobs.push(sb.from('tests').upsert(trows,{onConflict:'user_id,movement'}));
+  var lrows=state.logEntries.map(function(e){return{user_id:uid,id:e.id,date:e.date,type:e.type,exercise:e.exercise,result:e.result,weight:e.weight,reps:e.reps,sets:e.sets,pr:!!e.pr,comment:e.comment||''};});
+  if(lrows.length)jobs.push(sb.from('log_entries').upsert(lrows,{onConflict:'user_id,id'}));
+  jobs.push(sb.from('mobility').upsert([{user_id:uid,scores:state.mobilityScores||{},history:state.mobilityHistory||[]}],{onConflict:'user_id'}));
+  return Promise.all(jobs).then(function(res){
+    var bad=res.filter(function(r){return r&&r.error;})[0];
+    if(bad){
+      var m=bad.error.message||'';
+      if(/row-level security|permission/i.test(m))throw new Error('Недостаточно прав: сервер отклонил запись');
+      throw new Error(m);
+    }
+  });
 }
-function maybeAutoSync(){if(state.settings.syncUrl&&state.settings.autoSync)syncPush();}
+function maybeAutoSync(){if(sbReady()&&state.profile.id)cloudSync(true);}
+var _syncT=null;
+function debouncedSync(){if(!sbReady()||!state.profile.id)return;clearTimeout(_syncT);_syncT=setTimeout(function(){pushMine().catch(function(e){toast(e.message||'Ошибка сохранения');});},1200);}
+function serverDeleteTest(mv){if(sbReady()&&state.profile.id)sb.from('tests').delete().eq('user_id',state.profile.id).eq('movement',mv).then(function(r){if(r.error)toast('Ошибка удаления: '+r.error.message);});}
+function serverDeletePlan(date){if(sbReady()&&isCoach()&&state.profile.id)sb.from('plans').delete().eq('coach_id',state.profile.id).eq('date',date).then(function(r){if(r.error)toast('Ошибка удаления плана: '+r.error.message);});}
 // ===== BACKUP =====
 function exportJSON(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitlog-backup-'+todayStr()+'.json';a.click();toast('Скачано');}
 function importJSON(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);state=Object.assign(state,d);save();toast('Загружено');location.reload();}catch(e){toast('Неверный файл');}};r.readAsText(f);}
@@ -925,8 +1111,11 @@ function init(){
   if(document.getElementById('tab-feed').classList.contains('active'))renderFeed();
 }
 // первый запуск — онбординг
-if(!state.profile.name){document.getElementById('onboard-modal').classList.remove('hidden');}
-else{applyProfile();if(state.settings.syncUrl){syncPull();}else{init();}}
+initSb();
+applyProfile();
+init();
+bootAuth();
+if(sbReady()){sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_OUT'){state.profile={id:null,name:'',gender:'m',role:'athlete',coach_id:null};save();}});}
 window.addEventListener('beforeunload',function(){if(document.getElementById('tab-planner').classList.contains('active'))savePlanSilent();});
 </script>
 </body>
