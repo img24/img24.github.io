@@ -1082,7 +1082,77 @@ function serverDeleteTest(mv){if(sbReady()&&state.profile.id)sb.from('tests').de
 function serverDeletePlan(date){if(sbReady()&&isCoach()&&state.profile.id)sb.from('plans').delete().eq('coach_id',state.profile.id).eq('date',date).then(function(r){if(r.error)toast('Ошибка удаления плана: '+r.error.message);});}
 // ===== BACKUP =====
 function exportJSON(){var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='fitlog-backup-'+todayStr()+'.json';a.click();toast('Скачано');}
-function importJSON(ev){var f=ev.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{var d=JSON.parse(r.result);state=Object.assign(state,d);save();toast('Загружено');location.reload();}catch(e){toast('Неверный файл');}};r.readAsText(f);}
+function importJSON(ev){
+  var f=ev.target.files[0];if(!f)return;
+  var r=new FileReader();
+  r.onload=function(){
+    var d;
+    try{d=JSON.parse(r.result);}catch(e){toast('Неверный файл');return;}
+    if(!d||typeof d!=='object'){toast('Неверный файл');return;}
+    if(!state.profile.id){toast('Сначала войди в аккаунт');return;}
+
+    var nPlans=Object.keys(d.plans||{}).length,
+        nRes=Object.keys(d.results||{}).length,
+        nTests=Object.keys(d.tests||{}).length,
+        nLogs=(d.logEntries||[]).length;
+    var msg='Из файла будет загружено:\n'
+      +'• планов: '+nPlans+'\n• дней с результатами: '+nRes+'\n• тестов: '+nTests+'\n• записей дневника: '+nLogs+'\n\n';
+    if(nPlans&&!isCoach())msg+='Планы будут пропущены: их сохраняет только тренер.\n\n';
+    msg+='Профиль и настройки сервера не изменятся. Продолжить?';
+    if(!confirm(msg))return;
+
+    // --- планы (только тренер) ---
+    if(isCoach()&&d.plans){
+      Object.keys(d.plans).forEach(function(dt){
+        var p=d.plans[dt];if(!p)return;
+        var blocks=(p.blocks||[]).slice();
+        state.plans[dt]={warmup:p.warmup||'',blocks:blocks,author:state.profile.name,updated:p.updated||Date.now()};
+      });
+    }
+    // --- результаты (чистим мусорный ключ "undefined") ---
+    if(d.results)Object.keys(d.results).forEach(function(dt){
+      var src=d.results[dt]||{};
+      var bb={},mm={};
+      Object.keys(src.byBlock||{}).forEach(function(k){if(k&&k!=='undefined'&&src.byBlock[k])bb[k]=src.byBlock[k];});
+      Object.keys(src.meta||{}).forEach(function(k){if(k&&k!=='undefined')mm[k]=src.meta[k];});
+      if(!state.results[dt])state.results[dt]={byBlock:{},meta:{},notes:''};
+      var cur=state.results[dt];
+      cur.byBlock=Object.assign({},bb,cur.byBlock||{});
+      cur.meta=Object.assign({},mm,cur.meta||{});
+      if(!cur.notes&&src.notes)cur.notes=src.notes;
+    });
+    // --- тесты: побеждает более свежая дата ---
+    if(d.tests)Object.keys(d.tests).forEach(function(m){
+      var rem=d.tests[m];if(!rem||!rem.value)return;
+      var loc=state.tests[m];
+      if(!loc||((rem.date||'')>(loc.date||'')))state.tests[m]={value:rem.value,date:rem.date||todayStr()};
+    });
+    // --- дневник: объединяем по id ---
+    if(d.logEntries&&d.logEntries.length){
+      var seen={};state.logEntries.forEach(function(e){seen[e.id]=true;});
+      d.logEntries.forEach(function(e){if(e&&!seen[e.id]){state.logEntries.push(e);seen[e.id]=true;}});
+      state.logEntries.sort(function(a,b){return (b.id||0)-(a.id||0);});
+    }
+    // --- мобильность ---
+    if(d.mobilityScores&&Object.keys(d.mobilityScores).length&&!Object.keys(state.mobilityScores).length)state.mobilityScores=d.mobilityScores;
+    if(d.mobilityHistory&&d.mobilityHistory.length){
+      var have={};state.mobilityHistory.forEach(function(x){have[x.date]=true;});
+      d.mobilityHistory.forEach(function(x){if(x&&!have[x.date]){state.mobilityHistory.push(x);have[x.date]=true;}});
+      state.mobilityHistory.sort(function(a,b){return a.date>b.date?1:-1;});
+    }
+
+    migrateBlockIds();pruneEmptyPlans();backfillResultMeta();save();
+    toast('Загружаю на сервер…');
+    pushMine().then(function(){return pullAll();}).then(function(){
+      init();toast('✓ Данные перенесены на сервер');
+    }).catch(function(e){
+      toast('Локально загружено, но сервер отклонил: '+((e&&e.message)||''));
+      init();
+    });
+  };
+  r.readAsText(f);
+  ev.target.value='';
+}
 // ===== INIT =====
 function backfillResultMeta(){
   var ch=false;
